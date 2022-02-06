@@ -5,7 +5,7 @@
   "scripts": {
     "test": "jest",
     "start": "gatsby develop",
-    "build": "gatsby build"
+    "build": "gatsby build --prefix-paths"
   },
   "author": "",
   "license": "ISC",
