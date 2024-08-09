@@ -57,6 +57,15 @@ export default function BaseLayout(
                 Vorrunden-Wahrscheinlichkeiten
               </NavLink>
             </NavItem>
+            <NavItem>
+              <NavLink
+                tag={Link}
+                to="/tempi"
+                onClick={() => setCollapsed(false)}
+              >
+                Tempi
+              </NavLink>
+            </NavItem>
           </Nav>
         </Collapse>
       </Navbar>
