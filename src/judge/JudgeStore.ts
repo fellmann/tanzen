@@ -72,7 +72,8 @@ const JudgeStore = observable({
     for (let c = 0; c < this.marks.length; c++) {
       this.marks[c] = initMarks({
         ...this.marks[c]!!,
-        judges: Math.min(11, count),
+        judges: Math.min(100
+          , count),
       });
     }
   },
