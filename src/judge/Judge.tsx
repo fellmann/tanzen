@@ -66,22 +66,76 @@ const SkatingResult = observer(function SkatingResult() {
 const DanceView = observer(function DanceView(props: { dance: number }) {
   const d = props.dance;
   const result = store.results?.results[d];
+  const group1Result = store.results?.group1Results[d];
+  const group2Result = store.results?.group2Results[d];
+  const refinedPlaces = store.results?.refinedPlaces[d];
 
   const [open, setOpen] = useState(() => false);
+  const [openGroup1, setOpenGroup1] = useState(() => false);
+  const [openGroup2, setOpenGroup2] = useState(() => false);
+
+  const hasGroupResults =
+    store.group1Size > 0 && store.group1Size < store.judges;
 
   return (
     <div key={d} className="dance-section">
       {store.marks.length > 1 && <h3>{d + 1}. Tanz</h3>}
-      <MarkInput dance={d} places={result?.places} />
+      <MarkInput
+        dance={d}
+        places={result?.places}
+        group1Places={hasGroupResults ? group1Result?.places : undefined}
+        group2Places={hasGroupResults ? group2Result?.places : undefined}
+        refinedPlaces={hasGroupResults ? refinedPlaces : undefined}
+      />
       <br />
       {!!result?.table && (
         <>
           <Button size="sm" onClick={() => setOpen(!open)}>
-            Wertungstabelle
+            Wertungstabelle (Alle Wertungsrichter)
           </Button>
           <Collapse isOpen={open}>
             <ResultTableView table={result.table} places={result.places} />
           </Collapse>
+        </>
+      )}
+      {hasGroupResults && (
+        <>
+          <br />
+          <div style={{ marginTop: "10px" }}>
+            {!!group1Result?.table && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={() => setOpenGroup1(!openGroup1)}
+                  style={{ marginRight: "5px" }}
+                >
+                  Wertungstabelle Gruppe 1 (WR 1-{store.group1Size})
+                </Button>
+                <Collapse isOpen={openGroup1}>
+                  <ResultTableView
+                    table={group1Result.table}
+                    places={group1Result.places}
+                  />
+                </Collapse>
+              </>
+            )}
+          </div>
+          <div style={{ marginTop: "10px" }}>
+            {!!group2Result?.table && (
+              <>
+                <Button size="sm" onClick={() => setOpenGroup2(!openGroup2)}>
+                  Wertungstabelle Gruppe 2 (WR {store.group1Size + 1}-
+                  {store.judges})
+                </Button>
+                <Collapse isOpen={openGroup2}>
+                  <ResultTableView
+                    table={group2Result.table}
+                    places={group2Result.places}
+                  />
+                </Collapse>
+              </>
+            )}
+          </div>
         </>
       )}
     </div>
@@ -91,6 +145,9 @@ const DanceView = observer(function DanceView(props: { dance: number }) {
 const MarkInput = observer(function MarkInput(props: {
   dance: number;
   places?: PossiblePlace[];
+  group1Places?: PossiblePlace[];
+  group2Places?: PossiblePlace[];
+  refinedPlaces?: (string | undefined)[];
 }) {
   const dance = store.marks[props.dance];
   if (!dance) return null;
@@ -102,9 +159,23 @@ const MarkInput = observer(function MarkInput(props: {
     el?.select();
   };
 
+  const hasGroupResults = !!props.group1Places && !!props.group2Places;
+
   return (
     <div className="mark-input">
       <table className="mark-input">
+        <thead>
+          <tr>
+            <th>Nr</th>
+            {dance.marks[0]?.map((_, m) => (
+              <th key={m}></th>
+            ))}
+            {hasGroupResults && <th>U</th>}
+            {hasGroupResults && <th>O</th>}
+            <th></th>
+            {hasGroupResults && <th></th>}
+          </tr>
+        </thead>
         <tbody>
           {dance.marks.map((competitor, c) => (
             <tr className="mark-row" key={c}>
@@ -162,9 +233,32 @@ const MarkInput = observer(function MarkInput(props: {
                   </td>
                 );
               })}
+              {hasGroupResults && (
+                <>
+                  <td className="mark-label">
+                    {!!props.group1Places &&
+                      possiblePlaceString(props.group1Places[c])}
+                  </td>
+                  <td className="mark-label">
+                    {!!props.group2Places &&
+                      possiblePlaceString(props.group2Places[c])}
+                  </td>
+                </>
+              )}
               <td className="mark-label">
                 {!!props.places && possiblePlaceString(props.places[c])}
               </td>
+              {hasGroupResults && (
+                <>
+                  <td className="mark-label">
+                    {props.refinedPlaces?.[c] !== undefined &&
+                    props.places?.[c] &&
+                    props.refinedPlaces[c] != possiblePlaceString(props.places[c])
+                      ? props.refinedPlaces[c]
+                      : "-"}
+                  </td>
+                </>
+              )}
             </tr>
           ))}
         </tbody>
@@ -200,7 +294,7 @@ const ResultTableView = observer(function ResultTableView({
         <tr>
           <th>Nr.</th>
           {table[0]?.map(
-            (_, i) => i > 0 && <th key={i}>{i > 1 ? "1-" + i : i}</th>
+            (_, i) => i > 0 && <th key={i}>{i > 1 ? "1-" + i : i}</th>,
           )}
           <th>Ergebnis</th>
         </tr>
@@ -211,7 +305,7 @@ const ResultTableView = observer(function ResultTableView({
             <td>#{r + 1}</td>
             {row.map(
               (column, c) =>
-                c > 0 && <td key={c}>{column === undefined ? "—" : column}</td>
+                c > 0 && <td key={c}>{column === undefined ? "—" : column}</td>,
             )}
             <td>
               {places.length > r &&
@@ -321,6 +415,19 @@ const FinalConfiguration = observer(function FinalConfiguration() {
             value={store.marks.length}
             onFocus={selectAll}
             onChange={(e) => store.setDances(parseInt(e.target.value || "0"))}
+            style={{ textAlign: "right" }}
+          ></Input>
+        </InputGroup>
+        <InputGroup>
+          <InputGroupText>Unten (Nur RJS)</InputGroupText>
+          <Input
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={store.group1Size}
+            onFocus={selectAll}
+            onChange={(e) => {
+              store.setGroup1Size(parseInt(e.target.value || "0"));
+            }}
             style={{ textAlign: "right" }}
           ></Input>
         </InputGroup>
