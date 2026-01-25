@@ -66,6 +66,15 @@ export default function BaseLayout(
                 Tempi
               </NavLink>
             </NavItem>
+            <NavItem>
+              <NavLink
+                tag={Link}
+                to="/rehearsals"
+                onClick={() => setCollapsed(false)}
+              >
+                Stellproben
+              </NavLink>
+            </NavItem>
           </Nav>
         </Collapse>
       </Navbar>
